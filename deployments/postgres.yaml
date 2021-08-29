@@ -1,0 +1,1024 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb
+data:
+  00000_create_database.sql: |
+    CREATE DATABASE tourreserve;
+
+    COMMIT;
+  00100_create_all_sequences.sql: |
+    \c tourreserve;
+    --  ツアー担当者コードの生成用シーケンス  --
+    CREATE SEQUENCE TOUR_CON_CODE_SEQ INCREMENT BY 1 MINVALUE 1 MAXVALUE 9999999999 START WITH 1 NO CYCLE;
+    --  顧客コードの生成用シーケンス  --
+    CREATE SEQUENCE CUSTOMER_CODE_SEQ INCREMENT BY 1 MINVALUE 1 MAXVALUE 99999999 START WITH 1 NO CYCLE;
+    --  予約番号の生成用シーケンス  --
+    CREATE SEQUENCE RESERVE_NO_SEQ INCREMENT BY 1 MINVALUE 1 MAXVALUE 99999999 START WITH 1 NO CYCLE;
+
+    COMMIT;
+  00110_create_all_tables.sql: |
+    \c tourreserve;
+    -- 出発地テーブル  --
+    CREATE TABLE DEPARTURE (
+        DEP_CODE        CHAR(2)         NOT NULL,
+        DEP_NAME        VARCHAR(20)    NOT NULL,
+        CONSTRAINT TOUR_PK3 PRIMARY KEY(DEP_CODE)
+    )
+    ;
+
+    -- 目的地テーブル  --
+    CREATE TABLE ARRIVAL (
+        ARR_CODE        CHAR(2)         NOT NULL,
+        ARR_NAME        VARCHAR(20)    NOT NULL,
+        CONSTRAINT TOUR_PK4 PRIMARY KEY(ARR_CODE)
+    )
+    ;
+
+    -- 宿泊施設テーブル  --
+    CREATE TABLE ACCOMMODATION (
+        ACCOM_CODE      CHAR(4)         NOT NULL,
+        ACCOM_NAME      VARCHAR(100)   NOT NULL,
+        ACCOM_TEL       VARCHAR(13)    NOT NULL,
+        CONSTRAINT TOUR_PK5 PRIMARY KEY(ACCOM_CODE)
+    )
+    ;
+
+    -- 年令区分テーブル  --
+    CREATE TABLE AGE (
+        AGE_CODE        CHAR(1)         NOT NULL,
+        AGE_NAME        VARCHAR(10)    NOT NULL,
+        AGE_RATE        NUMERIC(3,0)     NOT NULL,
+        CONSTRAINT TOUR_PK9 PRIMARY KEY(AGE_CODE)
+    )
+    ;
+
+    -- 社員テーブル  --
+    CREATE TABLE EMPLOYEE (
+        STAFF_CODE      CHAR(8)         NOT NULL,
+        STAFF_NAME      VARCHAR(100)   NOT NULL,
+        STAFF_KANA      VARCHAR(100)   NOT NULL,
+        STAFF_PASS      VARCHAR(20)    NOT NULL,
+        CONSTRAINT TOUR_PK6 PRIMARY KEY(STAFF_CODE)
+    )
+    ;
+
+    -- 顧客テーブル  --
+    CREATE TABLE CUSTOMER (
+        CUSTOMER_CODE   CHAR(8)         NOT NULL,
+        CUSTOMER_NAME   VARCHAR(100)   NOT NULL,
+        CUSTOMER_KANA   VARCHAR(100)   NOT NULL,
+        CUSTOMER_PASS   VARCHAR(88)    NOT NULL,
+        CUSTOMER_BIRTH  DATE            NOT NULL,
+        CUSTOMER_JOB    VARCHAR(100)   NOT NULL,
+        CUSTOMER_MAIL   VARCHAR(300)   NULL,
+        CUSTOMER_TEL    VARCHAR(13)    NOT NULL,
+        CUSTOMER_POST   VARCHAR(8)     NOT NULL,
+        CUSTOMER_ADD    VARCHAR(300)   NOT NULL,
+        CONSTRAINT TOUR_PK8 PRIMARY KEY(CUSTOMER_CODE)
+    )
+    ;
+
+    -- ツアーテーブル  --
+    CREATE TABLE TOURINFO (
+        TOUR_CODE       CHAR(10)         NOT NULL,
+        PLANNED_DAY     DATE            NOT NULL,
+        PLAN_NO         CHAR(4)         NOT NULL,
+        TOUR_NAME       VARCHAR(300)   NOT NULL,
+        TOUR_DAYS       NUMERIC(2,0)     NOT NULL,
+        DEP_DAY         DATE            NOT NULL,
+        AVA_REC_MAX     NUMERIC(10,0)     NOT NULL,
+        DEP_CODE        CHAR(2)         NOT NULL,
+        ARR_CODE        CHAR(2)         NOT NULL,
+        ACCOM_CODE      CHAR(4)         NOT NULL,
+        BASE_PRICE      NUMERIC(7,0)     NOT NULL,
+        CONDUCTOR       CHAR(1)         DEFAULT '0' NOT NULL,
+        TOUR_ABS        VARCHAR(4000)  NULL,
+        CONSTRAINT TOUR_PK1 PRIMARY KEY(TOUR_CODE),
+           FOREIGN KEY (DEP_CODE) REFERENCES DEPARTURE,
+           FOREIGN KEY (ARR_CODE) REFERENCES ARRIVAL,
+           FOREIGN KEY (ACCOM_CODE) REFERENCES ACCOMMODATION
+    )
+    ;
+
+    -- ツアー担当者テーブル  --
+    CREATE TABLE TOURCON (
+        TOUR_CODE       CHAR(10)         NOT NULL,
+        TOUR_CON_CODE   CHAR(10)         NOT NULL,
+        TOUR_CON_NAME   VARCHAR(100)   NOT NULL,
+        TOUR_CON_MAIL   VARCHAR(300)   NOT NULL,
+        CONSTRAINT TOUR_PK2 PRIMARY KEY(TOUR_CODE,TOUR_CON_CODE),
+           FOREIGN KEY (TOUR_CODE) REFERENCES TOURINFO
+    )
+    ;
+
+    -- 予約テーブル  --
+    CREATE TABLE RESERVE (
+        RESERVE_NO      CHAR(8)         NOT NULL,
+        TOUR_CODE       CHAR(10)         NOT NULL,
+        RESERVED_DAY    DATE            NOT NULL,
+        ADULT_COUNT     NUMERIC(2,0)     NOT NULL,
+        CHILD_COUNT     NUMERIC(2,0)     NOT NULL,
+        CUSTOMER_CODE   CHAR(8)         NOT NULL,
+        TRANSFER        CHAR(1)         DEFAULT '0' NOT NULL,
+        SUM_PRICE       NUMERIC(7,0)     NOT NULL,
+        REMARKS         VARCHAR(1000)  NULL,
+        CONSTRAINT TOUR_PK7 PRIMARY KEY(RESERVE_NO),
+           FOREIGN KEY (TOUR_CODE) REFERENCES TOURINFO,
+           FOREIGN KEY (CUSTOMER_CODE) REFERENCES CUSTOMER
+    )
+    ;
+
+    COMMIT;
+  00120_create_all_index.sql: |
+    \c tourreserve;
+    --  ツアーテーブルのインデックス  --
+    CREATE INDEX TOURINFO_IDX1 ON TOURINFO (
+        DEP_CODE,
+        ARR_CODE,
+        DEP_DAY,
+        AVA_REC_MAX
+    );
+    --  予約テーブルのインデックス  --
+    CREATE INDEX RESERVE_IDX1 ON RESERVE (
+        TOUR_CODE
+    );
+
+    COMMIT;
+  00200_insert_departure.sql: |
+    \c tourreserve;
+    --\encoding SJIS
+    --\encoding UTF8
+
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('01', '北海道');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('02', '青森県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('03', '岩手県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('04', '宮城県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('05', '秋田県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('06', '山形県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('07', '福島県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('08', '茨城県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('09', '栃木県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('10', '群馬県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('11', '埼玉県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('12', '千葉県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('13', '東京都');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('14', '神奈川県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('15', '新潟県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('16', '富山県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('17', '石川県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('18', '福井県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('19', '山梨県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('20', '長野県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('21', '岐阜県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('22', '静岡県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('23', '愛知県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('24', '三重県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('25', '滋賀県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('26', '京都府');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('27', '大阪府');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('28', '兵庫県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('29', '奈良県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('30', '和歌山県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('31', '鳥取県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('32', '島根県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('33', '岡山県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('34', '広島県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('35', '山口県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('36', '徳島県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('37', '香川県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('38', '愛媛県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('39', '高知県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('40', '福岡県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('41', '佐賀県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('42', '長崎県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('43', '熊本県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('44', '大分県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('45', '宮崎県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('46', '鹿児島県');
+    INSERT INTO DEPARTURE (DEP_CODE, DEP_NAME) VALUES ('47', '沖縄県');
+
+    COMMIT;
+  00210_insert_arrival.sql: |
+    \c tourreserve;
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('01', '北海道');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('02', '青森県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('03', '岩手県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('04', '宮城県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('05', '秋田県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('06', '山形県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('07', '福島県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('08', '茨城県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('09', '栃木県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('10', '群馬県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('11', '埼玉県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('12', '千葉県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('13', '東京都');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('14', '神奈川県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('15', '新潟県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('16', '富山県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('17', '石川県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('18', '福井県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('19', '山梨県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('20', '長野県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('21', '岐阜県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('22', '静岡県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('23', '愛知県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('24', '三重県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('25', '滋賀県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('26', '京都府');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('27', '大阪府');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('28', '兵庫県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('29', '奈良県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('30', '和歌山県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('31', '鳥取県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('32', '島根県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('33', '岡山県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('34', '広島県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('35', '山口県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('36', '徳島県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('37', '香川県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('38', '愛媛県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('39', '高知県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('40', '福岡県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('41', '佐賀県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('42', '長崎県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('43', '熊本県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('44', '大分県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('45', '宮崎県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('46', '鹿児島県');
+    INSERT INTO ARRIVAL (ARR_CODE, ARR_NAME) VALUES ('47', '沖縄県');
+
+    COMMIT;
+  00220_insert_accommodation.sql: |
+    \c tourreserve;
+    INSERT INTO ACCOMMODATION (ACCOM_CODE, ACCOM_NAME, ACCOM_TEL) VALUES ('0001', 'TERASOLUNAホテル第一荘', '018-123-4567');
+    INSERT INTO ACCOMMODATION (ACCOM_CODE, ACCOM_NAME, ACCOM_TEL) VALUES ('0002', 'TERASOLUNAホテル第二荘', '019-123-4567');
+    INSERT INTO ACCOMMODATION (ACCOM_CODE, ACCOM_NAME, ACCOM_TEL) VALUES ('0003', 'TERASOLUNAホテル第三荘', '020-123-4567');
+    INSERT INTO ACCOMMODATION (ACCOM_CODE, ACCOM_NAME, ACCOM_TEL) VALUES ('0004', 'TERASOLUNAホテル第四荘', '021-123-4567');
+    INSERT INTO ACCOMMODATION (ACCOM_CODE, ACCOM_NAME, ACCOM_TEL) VALUES ('0005', 'TERASOLUNAホテル第五荘', '022-123-4567');
+
+    COMMIT;
+  00230_insert_age.sql: |
+    \c tourreserve;
+    INSERT INTO AGE (AGE_CODE, AGE_NAME, AGE_RATE) VALUES ('0', '大人', '100');
+    INSERT INTO AGE (AGE_CODE, AGE_NAME, AGE_RATE) VALUES ('1', '小人', '50');
+
+    COMMIT;
+  00240_insert_employee.sql: |
+    \c tourreserve;
+    INSERT INTO EMPLOYEE (STAFF_CODE, STAFF_NAME, STAFF_KANA, STAFF_PASS) VALUES ('00000001', 'データ太郎', 'データタロウ', 'password');
+    INSERT INTO EMPLOYEE (STAFF_CODE, STAFF_NAME, STAFF_KANA, STAFF_PASS) VALUES ('00000002', 'データ次郎', 'データジロウ', 'password');
+    INSERT INTO EMPLOYEE (STAFF_CODE, STAFF_NAME, STAFF_KANA, STAFF_PASS) VALUES ('00000003', 'データ三郎', 'データサブロウ', 'password');
+    INSERT INTO EMPLOYEE (STAFF_CODE, STAFF_NAME, STAFF_KANA, STAFF_PASS) VALUES ('00000004', 'データ四郎', 'データシロウ', 'password');
+    INSERT INTO EMPLOYEE (STAFF_CODE, STAFF_NAME, STAFF_KANA, STAFF_PASS) VALUES ('00000005', 'データ五郎', 'データゴロウ', 'password');
+
+    COMMIT;
+  00250_insert_customer.sql: |
+    \c tourreserve;
+    --  初期データ登録用のプロシージャを生成する。  --
+    CREATE OR REPLACE FUNCTION C_CUSTOMER(
+        --  顧客テーブルへの登録データ  --
+        IN customerName  VARCHAR,
+        IN customerKana  VARCHAR,
+        IN customerPass  VARCHAR,
+        IN customerBirth DATE,
+        IN customerJob   VARCHAR,
+        IN customerMail  VARCHAR,
+        IN customerTel   VARCHAR,
+        IN customerPost  VARCHAR,
+        IN customerAdd  VARCHAR
+        )
+    RETURNS
+        CHAR(8) AS $$
+    DECLARE
+        customerCode CHAR(8);
+    BEGIN
+        --  顧客コードシーケンスから顧客コードを取得  --
+        SELECT TO_CHAR(nextval('CUSTOMER_CODE_SEQ'), 'FM09999999') INTO customerCode;
+        --FROM
+          -- DUAL;
+
+        --  顧客情報の登録  --
+        INSERT INTO CUSTOMER(
+          CUSTOMER_CODE,
+          CUSTOMER_NAME,
+          CUSTOMER_KANA,
+          CUSTOMER_PASS,
+          CUSTOMER_BIRTH,
+          CUSTOMER_JOB,
+          CUSTOMER_MAIL,
+          CUSTOMER_TEL,
+          CUSTOMER_POST,
+          CUSTOMER_ADD
+        ) VALUES (
+          customerCode,
+          customerName,
+          customerKana,
+          customerPass,
+          customerBirth,
+          customerJob,
+          customerMail,
+          customerTel,
+          customerPost,
+          customerAdd
+        );
+        RETURN customerCode;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    --  初期顧客情報を生成する。  --
+    SELECT  C_CUSTOMER('木村　太郎', 'キムラ　タロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1975/01/05', 'プログラマ', 'tarou@example.com', '111-1111-1111', '276-0022', '千葉県八千代市上高野');
+    SELECT C_CUSTOMER('前田　五郎', 'マエダ　ゴロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1980/12/13', '建設業', 'gorou@example.com', '222-2222-2222', '135-8671', '東京都江東区豊洲3-3-9');
+    SELECT C_CUSTOMER('鈴木　花子', 'スズキ　ハナコ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1960/10/21', '主婦', '', '333-3333-3333', '616-0000', '京都市右京区');
+    SELECT C_CUSTOMER('加藤　一郎', 'カトウ　イチロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1965/03/12', '自営業', 'irasyai@example.com', '444-4444-4444', '039-1500', '三戸郡五戸町');
+    SELECT C_CUSTOMER('田中　南都化', 'タナカ　ナントカ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1970/06/30', '自営業', 'nantoka@example.com', '555-5555-5555', '039-1500', '三戸郡五戸町');
+    SELECT C_CUSTOMER('渡辺　梟', 'ワタナベ　フクロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1966/11/03', '自営業', 'watanabehu@example.com', '666-6666-6666', '135-8671', '東京都江東区豊洲3-3-9');
+    SELECT C_CUSTOMER('データ　太郎', 'データ　タロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1970/04/05', '営業', 'data1@example.com', '123-1234-1234', '135-8671', '東京都江東区豊洲3-3-9');
+    SELECT C_CUSTOMER('データ　次郎', 'データ　ジロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1972/05/15', '営業', 'data2@example.com', '123-1234-1234', '135-8671', '東京都江東区豊洲3-3-9');
+    SELECT C_CUSTOMER('データ　三郎', 'データ　サブロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1974/06/02', '営業', 'data3@example.com', '123-1234-1234', '135-8671', '東京都江東区豊洲3-3-9');
+    SELECT C_CUSTOMER('データ　四郎', 'データ　シロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1976/12/30', '営業', 'data4@example.com', '123-1234-1234', '135-8671', '東京都江東区豊洲3-3-9');
+    SELECT C_CUSTOMER('データ　五郎', 'データ　ゴロウ', '{pbkdf2}34036dc513d126f31515bc6401347a33bc495df1b27b9b39c5770798caa96594616716943f2f33e4', '1978/05/25', '営業', 'data5@example.com', '123-1234-1234', '135-8671', '東京都江東区豊洲3-3-9');
+
+    --  初期データ登録用のプロシージャを削除する。  --
+    DROP FUNCTION C_CUSTOMER(VARCHAR,VARCHAR,VARCHAR,DATE,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR);
+    COMMIT;
+  00260_insert_tourinfo.sql: |
+    \c tourreserve;
+    --  初期データ入力のためのツアーコードを生成するシーケンス  --
+    CREATE SEQUENCE TOUR_CODE_SEQ INCREMENT BY 1 MINVALUE 1 MAXVALUE 9999999999 START WITH 1 NO CYCLE;
+
+    --  北海道から「01：北海道、02：青森県、03：岩手県、04：宮城県、05：秋田県、06：山形県、
+    --  07：福島県、08：茨城県、09：栃木県、10：群馬県」への1ヶ月間のツアー情報を生成するプロシージャ  --
+    CREATE OR REPLACE FUNCTION C_TOURINFO(
+          IN tourName CHAR
+        )
+        RETURNS
+          INT AS $$
+        DECLARE
+          tourCode CHAR(10);
+          i INT;
+          j INT;
+        BEGIN
+          i := 1;
+          j := 1;
+          FOR i IN 1..365 LOOP
+            FOR j IN 1..10 LOOP
+              SELECT TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+          --  DUAL ;
+        INSERT INTO TOURINFO(
+          TOUR_CODE,
+          PLANNED_DAY,
+          PLAN_NO,
+          TOUR_NAME,
+          TOUR_DAYS,
+          DEP_DAY,
+          AVA_REC_MAX,
+          DEP_CODE,
+          ARR_CODE,
+          ACCOM_CODE,
+          BASE_PRICE,
+          CONDUCTOR,
+          TOUR_ABS
+        ) VALUES (
+          tourCode,
+          CURRENT_DATE,
+          ('01'||TO_CHAR(j, 'FM09')),
+          (tourName||'(日帰り)01'),
+          '1',
+          (CURRENT_DATE + i + 5),
+          '2147483647',
+          '01',
+          TO_CHAR(j,'FM09'),
+          '0001',
+          '14000',
+          '1',
+          'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+        SELECT TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+          -- DUAL;
+        INSERT INTO TOURINFO(
+          TOUR_CODE,
+          PLANNED_DAY,
+          PLAN_NO,
+          TOUR_NAME,
+          TOUR_DAYS,
+          DEP_DAY,
+          AVA_REC_MAX,
+          DEP_CODE,
+          ARR_CODE,
+          ACCOM_CODE,
+          BASE_PRICE,
+          CONDUCTOR,
+          TOUR_ABS
+        ) VALUES (
+          tourCode,
+          CURRENT_DATE,
+          ('01'||TO_CHAR(j, 'FM09')),
+          (tourName||'(日帰り)02'),
+          '1',
+          (CURRENT_DATE + i + 5),
+          '2147483647',
+          '01',
+          TO_CHAR(j, 'FM09'),
+          '0001',
+          '11000',
+          '0',
+          'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+        SELECT TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+          -- DUAL;
+        INSERT INTO TOURINFO(
+          TOUR_CODE,
+          PLANNED_DAY,
+          PLAN_NO,
+          TOUR_NAME,
+          TOUR_DAYS,
+          DEP_DAY,
+          AVA_REC_MAX,
+          DEP_CODE,
+          ARR_CODE,
+          ACCOM_CODE,
+          BASE_PRICE,
+          CONDUCTOR,
+          TOUR_ABS
+        ) VALUES (
+          tourCode,
+          CURRENT_DATE,
+          ('01'||TO_CHAR(j, 'FM09')),
+          (tourName||'(1泊2日)01'),
+          '2',
+          (CURRENT_DATE + i + 5),
+          '2147483647',
+          '01',
+          TO_CHAR(j, 'FM09'),
+          '0001',
+          '19000',
+          '1',
+          'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+         );
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+          -- DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(1泊2日)02')
+            , '2'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '16000'
+            , '0'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(2泊3日)01')
+            , '3'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '23000'
+            , '1'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(2泊3日)02')
+            , '3'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '20000'
+            , '0'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(3泊4日)01')
+            , '4'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '30000'
+            , '1'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(3泊4日)02')
+            , '4'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '27000'
+            , '0'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(4泊5日)01')
+            , '5'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '37000'
+            , '1'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(4泊5日)02')
+            , '5'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '34000'
+            , '0'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(5泊6日)')
+            , '6'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '45000'
+            , '1'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        SELECT
+            TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+        --    DUAL ;
+
+        INSERT INTO TOURINFO(
+            TOUR_CODE
+            , PLANNED_DAY
+            , PLAN_NO
+            , TOUR_NAME
+            , TOUR_DAYS
+            , DEP_DAY
+            , AVA_REC_MAX
+            , DEP_CODE
+            , ARR_CODE
+            , ACCOM_CODE
+            , BASE_PRICE
+            , CONDUCTOR
+            , TOUR_ABS
+        ) VALUES (
+            tourCode
+            , CURRENT_DATE
+            , ('01'||TO_CHAR(j, 'FM09'))
+            , (tourName||'(6泊7日)')
+            , '7'
+            , (CURRENT_DATE + i + 5)
+            , '2147483647'
+            , '01'
+            , TO_CHAR(j, 'FM09')
+            , '0001'
+            , '75000'
+            , '1'
+            , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+
+        END LOOP;
+      END LOOP;
+      RETURN i*j;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    --  北海道から「01：北海道」への日帰りツアー情報を生成するプロシージャ  --
+    CREATE OR REPLACE FUNCTION C_TOURINFO2(
+      IN tourName CHAR)
+    RETURNS
+      INT AS $$
+    DECLARE
+      tourCode CHAR(10);
+      i INT;
+    BEGIN
+      i := 1;
+      FOR i IN 1..99 LOOP
+        SELECT
+          TO_CHAR(nextval('TOUR_CODE_SEQ'), 'FM0000000999') INTO tourCode;
+        --FROM
+          --  DUAL ;
+        INSERT INTO TOURINFO(
+          TOUR_CODE
+          , PLANNED_DAY
+          , PLAN_NO
+          , TOUR_NAME
+          , TOUR_DAYS
+          , DEP_DAY
+          , AVA_REC_MAX
+          , DEP_CODE
+          , ARR_CODE
+          , ACCOM_CODE
+          , BASE_PRICE
+          , CONDUCTOR
+          , TOUR_ABS
+        ) VALUES (
+          tourCode
+          , CURRENT_DATE
+          , '0101'
+          , (tourName||TO_CHAR(i, 'FM09'))
+          , '1'
+          , (CURRENT_DATE) + 7
+          , '2147483647'
+          , '01'
+          , '01'
+          , '0001'
+          , '20000'
+          , '1'
+          , 'そこは別天地、静寂と湯けむりの待つ宿へ…'||CHR(13)||CHR(10)||'詳しい情報はお取り合わせをお願い致します。'
+        );
+        END LOOP;
+      RETURN i;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    --  初期ツアー情報を生成する。  --
+    SELECT  C_TOURINFO('【おすすめ】Terasolunaツアー');
+    SELECT  C_TOURINFO('【期間限定】スペシャルツアー');
+    SELECT  C_TOURINFO2('【北海道限定】日帰り別天地ツアー');
+
+    --  初期データ登録用のプロシージャとシーケンスを削除する。 --
+    DROP FUNCTION C_TOURINFO(CHAR);
+    DROP FUNCTION C_TOURINFO2(CHAR);
+    DROP SEQUENCE TOUR_CODE_SEQ;
+
+    COMMIT;
+  00270_insert_tourcon.sql: |
+    \c tourreserve;
+    --  初期データ登録用のプロシージャを生成する。  --
+    CREATE OR REPLACE FUNCTION C_TOURCON(
+      --  ツアー担当者テーブルへの登録データ  --
+      IN tourConName1 VARCHAR,
+      IN tourConMail1 VARCHAR,
+      IN tourConName2 VARCHAR,
+      IN tourConMail2 VARCHAR
+    )
+    RETURNS
+      INT AS $$
+    DECLARE
+      tourConCode CHAR(10);
+      i INT;
+    BEGIN
+      i := 1;
+      FOR i IN 1..6099 LOOP
+        --  担当者コードシーケンスから担当者コードを取得  --
+        SELECT TO_CHAR(nextval('TOUR_CON_CODE_SEQ'), 'FM0000000999') INTO tourConCode;
+        --FROM
+          --  DUAL ;
+        --  ツアー担当者情報の登録 --
+        INSERT INTO TOURCON(
+          TOUR_CODE,
+          TOUR_CON_CODE,
+          TOUR_CON_NAME,
+          TOUR_CON_MAIL
+        ) VALUES (
+          TO_CHAR(i, 'FM0000000999'),
+          tourConCode,
+          tourConName1,
+          tourConMail1
+        );
+        IF mod(i,11) = 0 THEN
+          --  担当者コードシーケンスから担当者コードを取得 --
+          SELECT TO_CHAR(nextval('TOUR_CON_CODE_SEQ'), 'FM0000000999') INTO tourConCode;
+          --FROM
+            --  DUAL ;
+          --  ツアー担当者情報の登録 --
+          INSERT INTO TOURCON(
+            TOUR_CODE,
+            TOUR_CON_CODE,
+            TOUR_CON_NAME,
+            TOUR_CON_MAIL
+          ) VALUES (
+            TO_CHAR(i, 'FM0000000999'),
+            tourConCode,
+            tourConName2,
+            tourConMail2
+          );
+        END IF;
+        IF mod(i,12) = 0 THEN
+          --  担当者コードシーケンスから担当者コードを取得 --
+          SELECT TO_CHAR(nextval('TOUR_CON_CODE_SEQ'), 'FM0000000999') INTO tourConCode;
+          --FROM
+            --  DUAL ;
+          --  ツアー担当者情報の登録 --
+          INSERT INTO TOURCON(
+            TOUR_CODE,
+            TOUR_CON_CODE,
+            TOUR_CON_NAME,
+            TOUR_CON_MAIL
+          ) VALUES (
+            TO_CHAR(i, 'FM0000000999'),
+            tourConCode,
+            tourConName2,
+            tourConMail2
+          );
+        END IF;
+      END LOOP;
+      RETURN 0;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    -- 初期ツアー担当者情報を生成する。  --
+    SELECT C_TOURCON('エヌティティ　太郎', 'ntt1@example.com', 'エヌティティ　 次郎', 'ntt2@example.com');
+
+    --  初期データ登録用のプロシージャを削除する。  --
+    DROP FUNCTION C_TOURCON(VARCHAR,VARCHAR,VARCHAR,VARCHAR);
+    COMMIT;
+  00280_insert_reserve.sql: |
+    \c tourreserve;
+    --  初期データ登録用のプロシージャを生成する。  --
+    CREATE OR REPLACE FUNCTION C_RESERVE(
+      --  予約テーブルへの登録データ  --
+      IN tourCode CHAR,
+      IN adultCount INT,
+      IN childCount INT,
+      IN customerCode CHAR,
+      IN transferChar CHAR,
+      IN remarksVChar VARCHAR
+    )
+    RETURNS
+      INT AS $$
+    DECLARE
+      reserveCode CHAR(8);
+      adultRate INT;
+      childRate INT;
+      basePrice INT;
+    BEGIN
+      adultRate := 0;
+      childRate := 0;
+      basePrice := 0;
+      --  予約コードシーケンスから予約コードを取得 --
+      SELECT TO_CHAR(nextval('RESERVE_NO_SEQ'), 'FM09999999') INTO reserveCode;
+      --FROM
+        --  DUAL ;
+      --  ツアーテーブルから基本料金を取得  --
+      SELECT BASE_PRICE INTO basePrice FROM TOURINFO WHERE TOUR_CODE = tourCode;
+      --  年令区分テーブルから大人の年令区分別割引率を取得  --
+      SELECT AGE_RATE INTO adultRate FROM AGE WHERE AGE_CODE = '0';
+      --  年令区分テーブルから小人の年令区分別割引率を取得  --
+      SELECT AGE_RATE INTO childRate FROM AGE WHERE AGE_CODE = '1';
+      --  予約情報の登録  --
+      INSERT INTO RESERVE(RESERVE_NO, TOUR_CODE, RESERVED_DAY, ADULT_COUNT, CHILD_COUNT, CUSTOMER_CODE, TRANSFER, SUM_PRICE, REMARKS)
+      VALUES (reserveCode, tourCode, CURRENT_DATE - 7, adultCount, childCount, customerCode, transferChar,
+        (basePrice * adultRate / 100 * adultCount) + (basePrice * childRate / 100 * childCount), remarksVChar);
+      RETURN 0;
+    END;
+    $$ LANGUAGE plpgsql;
+    --  初期予約情報を生成する。  --
+    SELECT C_RESERVE('0000003012', '5', '3', '00000001', '0', '特になし');
+    SELECT C_RESERVE('0000003012', '4', '0', '00000002', '0', '');
+    SELECT C_RESERVE('0000003012', '1', '3', '00000003', '0', '特になし');
+    SELECT C_RESERVE('0000003012', '2', '5', '00000004', '0', '特になし');
+    SELECT C_RESERVE('0000003012', '2', '0', '00000005', '0', '特になし');
+    SELECT C_RESERVE('0000003012', '2', '2', '00000006', '0', '特になし');
+    SELECT C_RESERVE('0000000003', '1', '3', '00000003', '0', '特になし');
+    SELECT C_RESERVE('0000000005', '2', '2', '00000004', '0', '特になし');
+    SELECT C_RESERVE('0000000005', '2', '1', '00000005', '0', '特になし');
+    SELECT C_RESERVE('0000000008', '2', '0', '00000006', '0', '特になし');
+    SELECT C_RESERVE('0000000008', '2', '0', '00000007', '0', '特になし');
+    SELECT C_RESERVE('0000000008', '2', '0', '00000008', '0', '特になし');
+    -- 初期データ登録用のプロシージャを削除する。  --
+    DROP FUNCTION C_RESERVE(CHAR,INT,INT,CHAR,CHAR,VARCHAR);
+    COMMIT;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgres
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - image: postgres:13
+        name: postgres
+        volumeMounts:
+        - mountPath: /docker-entrypoint-initdb.d
+          name: postgres-initdb
+        env:
+        - name: POSTGRES_PASSWORD
+          value: postgres
+      volumes:
+      - name: postgres-initdb
+        configMap:
+          name: postgres-initdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres
+  name: postgres
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: tourreservation
+  name: tourreservation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tourreservation
+  template:
+    metadata:
+      labels:
+        app: tourreservation
+    spec:
+      containers:
+      - image: grugrut/tourreservation
+        name: tourreservation
+        env:
+        - name: database.url
+          value: jdbc:postgresql://postgres:5432/tourreserve
+        - name: database.password
+          value: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: tourreservation
+  name: tourreservation
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: tourreservation
