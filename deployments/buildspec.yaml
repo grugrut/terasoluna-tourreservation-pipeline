@@ -1,0 +1,12 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
+  pre_build:
+    commands:
+      - aws eks update-kubeconfig --name eks-tourreservation
+  build:
+    commands:
+      - kubectl apply -f deployments/tourreservation.yaml
