@@ -1,0 +1,18 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Dockerhub...
+      - echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin ${ECR_REPOSITORY}
+  build:
+    commands:
+      - echo Building docker image...
+      - docker build -t tourreservation .
+      - docker tag tourreservation ${ECR_REPOSITORY}/tourreservation
+  post_build:
+    commands:
+      - echo Pushing docker image...
+      - docker push ${ECR_REPOSITORY}/tourreservation
